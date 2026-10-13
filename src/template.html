@@ -494,9 +494,19 @@ function showEnd(won) {
   ovEnd.hidden = false; controls.hidden = true;
   setTimeout(() => document.getElementById('againBtn').focus(), 50);
 }
+function unlockAudio() {
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (_) {}
+  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) { ac = null; return; } }
+  try {
+    if (ac.state !== 'running') ac.resume();
+    const b = ac.createBuffer(1, 1, 22050), src = ac.createBufferSource();
+    src.buffer = b; src.connect(ac.destination); src.start(0);
+  } catch (_) {}
+}
+['pointerdown', 'touchend', 'keydown'].forEach(t => addEventListener(t, () => { if (ac && ac.state !== 'running') unlockAudio(); }, true));
+document.addEventListener('visibilitychange', () => { if (!document.hidden && ac && ac.state !== 'running') { try { ac.resume(); } catch (_) {} } });
 function start() {
-  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) { ac = null; } }
-  if (ac && ac.state === 'suspended') ac.resume();
+  unlockAudio();
   resetGame(); state = 'play';
   ovStart.hidden = true; ovEnd.hidden = true; controls.hidden = !touch;
   for (const k in keys) keys[k] = false;
