@@ -33,8 +33,10 @@ body{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-c
 .cbtn.on{background:rgba(240,164,58,.5);border-color:var(--amber);color:var(--ink)}
 .mute{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:12px;z-index:6;width:40px;height:40px;border-radius:50%;border:2px solid rgba(244,237,228,.3);background:rgba(21,17,26,.6);color:var(--ink);font-size:16px;cursor:pointer;padding:0}
 .mute.off{color:var(--muted);text-decoration:line-through}
-@media (max-height:520px){.card{gap:10px;padding:16px 18px}.face{width:62px}.title{font-size:34px}.title.small{font-size:26px}.lead{font-size:9px;line-height:1.7}.btn{padding:12px 22px}.score{font-size:16px}}
-@media (prefers-reduced-motion:reduce){.face{animation:none}}
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:14px}
+.prize{width:128px;height:auto;animation:bob 1.6s ease-in-out infinite reverse}
+@media (max-height:520px){.prize{width:84px}.card{gap:10px;padding:16px 18px}.face{width:62px}.title{font-size:34px}.title.small{font-size:26px}.lead{font-size:9px;line-height:1.7}.btn{padding:12px 22px}.score{font-size:16px}}
+@media (prefers-reduced-motion:reduce){.face,.prize{animation:none}}
 </style>
 
 <canvas id="game" aria-label="Super Wisam Spielfeld"></canvas>
@@ -60,7 +62,7 @@ body{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-c
 
 <div class="overlay" id="ovEnd" hidden>
   <div class="card">
-    <img class="face" src="__FACE__" alt="Wisam">
+    <div class="podium"><img class="face" src="__FACE__" alt="Wisam"><img class="prize" id="endPrize" alt="Siegerpreis: Schoko-Milch-Riegel"></div>
     <h2 class="title small" id="endTitle">GESCHAFFT!</h2>
     <p class="score" id="endScore">0 / 0</p>
     <p class="lead" id="endText"></p>
@@ -288,6 +290,38 @@ const wallPat = (() => {
   return ctx.createPattern(c, 'repeat');
 })();
 
+function makeCloud(w, h, blobs) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+  const layer = (col, dx, dy, rs) => { g.fillStyle = col; for (const [x, y, r] of blobs) { g.beginPath(); g.arc(x + dx, y + dy, r * rs, 0, 7); g.fill(); } };
+  layer('#9d90b8', 0, 1.6, 1); layer('#d9d1e8', 0, 0, .95); layer('#f6f3fb', -1.3, -1.5, .58);
+  const d = g.getImageData(0, 0, w, h); for (let i = 3; i < d.data.length; i += 4) d.data[i] = d.data[i] > 110 ? 255 : 0; g.putImageData(d, 0, 0);
+  return c;
+}
+const clouds = [
+  makeCloud(40, 19, [[10, 12, 6], [18, 9, 7], [27, 10, 6], [33, 13, 4], [6, 14, 4], [22, 14, 5]]),
+  makeCloud(56, 21, [[9, 14, 5], [17, 11, 7], [27, 9, 8], [37, 11, 7], [46, 14, 5], [30, 15, 5]]),
+  makeCloud(30, 15, [[8, 10, 5], [15, 7, 6], [22, 10, 5]])
+];
+const prizeSpr = makeCanvas(48, 30, 4, g => {
+  g.fillStyle = '#331709'; g.fillRect(3, 20, 42, 7);
+  g.fillStyle = '#fbf6ec'; g.fillRect(3, 12, 42, 9); g.fillStyle = '#ece1cc'; g.fillRect(3, 18, 42, 3);
+  g.fillStyle = '#fffdf8'; [[8, 14], [17, 15], [27, 13.5], [36, 15], [41, 13.8]].forEach(([x, y]) => g.fillRect(x, y, 1.6, .8));
+  g.fillStyle = '#4a2412'; g.beginPath(); g.moveTo(3, 13); g.lineTo(3, 7);
+  for (let i = 0; i < 7; i++) { const x0 = 3 + i * 6; g.quadraticCurveTo(x0 + 3, 1.5, x0 + 6, 7); }
+  g.lineTo(45, 13); g.closePath(); g.fill();
+  g.fillStyle = '#2b1208'; g.fillRect(3, 12, 42, 1);
+  g.strokeStyle = '#8f5a37'; g.lineWidth = .9;
+  for (let i = 0; i < 7; i++) { const x0 = 3 + i * 6; g.beginPath(); g.moveTo(x0 + 1.4, 6.2); g.quadraticCurveTo(x0 + 3, 3.3, x0 + 4.6, 6.2); g.stroke(); }
+  g.fillStyle = '#d6a984'; for (let i = 0; i < 7; i++) g.fillRect(3 + i * 6 + 2.2, 4.6, 1, .7);
+  g.fillStyle = '#5c2f18'; g.fillRect(3, 9.5, 42, .8);
+  const pts = []; for (let k = 0; k <= 12; k++) pts.push([1 + k * 3.83, k % 2 ? 16.6 : 19.8]);
+  g.fillStyle = '#b9c4d4'; g.beginPath(); g.moveTo(1, 29); pts.forEach(([x, y]) => g.lineTo(x, y)); g.lineTo(47, 29); g.closePath(); g.fill();
+  g.fillStyle = '#8f9cb2'; [[5, 21], [13, 20], [22, 22], [31, 20], [40, 21]].forEach(([x, y]) => { g.beginPath(); g.moveTo(x, y); g.lineTo(x + 2.2, y); g.lineTo(x - 1, 29); g.lineTo(x - 3, 29); g.closePath(); g.fill(); });
+  g.fillStyle = '#eef3fa'; [[8, 20.5], [18, 21], [27, 20], [36, 21.5], [44, 20.5]].forEach(([x, y]) => { g.beginPath(); g.moveTo(x, y); g.lineTo(x + 1.2, y); g.lineTo(x - .6, 28.5); g.lineTo(x - 1.6, 28.5); g.closePath(); g.fill(); });
+  g.fillStyle = '#7f8ca3'; g.fillRect(1, 28.2, 46, .8);
+  g.fillStyle = 'rgba(255,255,255,.9)'; [[10, 24], [24, 26], [38, 24.5], [15, 10], [33, 8.5], [42, 11]].forEach(([x, y]) => { g.beginPath(); g.ellipse(x, y, .55, .75, 0, 0, 7); g.fill(); });
+});
+
 /* ---------- Zeichnen ---------- */
 let dpr = 1, scale = 1, viewW = 400, gameTop = 0, cw = 0, ch = 0;
 const viewH = ROWS * TS;
@@ -398,7 +432,9 @@ function drawBackground() {
     if (nx < -150 || nx > viewW + 150) continue;
     const [txt, col] = NEON[i % NEON.length], ny = 70 + (i * 53 % 90);
     const flick = (i === 2 && Math.sin(time * 13) > .85) ? .25 : 1;
-    ctx.globalAlpha = flick; ctx.shadowColor = col; ctx.shadowBlur = 16; ctx.fillStyle = col; ctx.fillText(txt, nx, ny);
+    const zf = 1 - Math.max(0, Math.min(1, (camX + viewW - 147 * TS) / (8 * TS)));
+    if (zf <= 0) continue;
+    ctx.globalAlpha = flick * zf; ctx.shadowColor = col; ctx.shadowBlur = 16; ctx.fillStyle = col; ctx.fillText(txt, nx, ny);
     ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillText(txt, nx, ny);
     ctx.globalAlpha = 1;
   }
@@ -407,11 +443,56 @@ function drawBackground() {
   const g = ctx.createLinearGradient(0, 0, 0, viewH);
   g.addColorStop(0, 'rgba(8,5,12,.55)'); g.addColorStop(.5, 'rgba(8,5,12,0)'); g.addColorStop(1, 'rgba(8,5,12,.25)');
   ctx.fillStyle = g; ctx.fillRect(0, 0, viewW, viewH);
+  // Wolken im Zielbereich
+  const z = Math.max(0, Math.min(1, (camX + viewW - 147 * TS) / (8 * TS)));
+  if (z > 0) {
+    ctx.save(); ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = `rgba(190,170,240,${.07 * z})`; ctx.fillRect(0, 0, viewW, viewH);
+    for (let i = 0; i < 14; i++) {
+      const cl = clouds[i % 3], sx = (147 * TS - camX) * .6 + i * 105 + ((time * 7 + i * 29) % 60) - 30, sy = 24 + (i * 47 % 150);
+      if (sx < -130 || sx > viewW + 20) continue;
+      ctx.globalAlpha = (.35 + (i % 3) * .12) * z; ctx.drawImage(cl, Math.round(sx), sy, cl.width * 2, cl.height * 2);
+    }
+    ctx.restore();
+  }
+}
+function drawFloorClouds() {
+  if (159 * TS - camX > viewW + 40) return;
+  ctx.save(); ctx.imageSmoothingEnabled = false;
+  for (let i = 0, wx = 158 * TS; wx < W * TS + 40; wx += 30, i++) {
+    const cl = clouds[(i * 2) % 3], w = cl.width * 2, h = cl.height * 2;
+    ctx.drawImage(cl, Math.round(wx - w / 2 + Math.sin(time * 1.4 + i) * 2), Math.round(12 * TS - h * .5 + (i % 2) * 4), w, h);
+  }
+  ctx.restore();
+}
+function star(x, y, s) { ctx.beginPath(); ctx.moveTo(x, y - s * 2); ctx.lineTo(x + s * .45, y - s * .45); ctx.lineTo(x + s * 2, y); ctx.lineTo(x + s * .45, y + s * .45); ctx.lineTo(x, y + s * 2); ctx.lineTo(x - s * .45, y + s * .45); ctx.lineTo(x - s * 2, y); ctx.lineTo(x - s * .45, y - s * .45); ctx.closePath(); ctx.fill(); }
+function drawPrize() {
+  const gx = GOAL_X, gy = 12 * TS;
+  if (gx - camX > viewW + 200) return;
+  let x = gx + 111, y = gy - 80 + Math.sin(time * 2) * 2;
+  const won = state === 'win' || state === 'done';
+  if (won) { const t = Math.min(1, winT / .6), e = t * (2 - t), tx = p.x + p.w / 2 - 24, ty = p.y - 42 - Math.abs(Math.sin(winT * 5)) * 3; x += (tx - x) * e; y += (ty - y) * e; }
+  const rg = ctx.createRadialGradient(x + 24, y + 15, 2, x + 24, y + 15, 42);
+  rg.addColorStop(0, 'rgba(200,230,255,.5)'); rg.addColorStop(1, 'rgba(200,230,255,0)');
+  ctx.fillStyle = rg; ctx.fillRect(x - 20, y - 28, 88, 86);
+  ctx.drawImage(prizeSpr, Math.round(x), Math.round(y), 48, 30);
+  ctx.fillStyle = 'rgba(255,255,255,.95)';
+  for (let k = 0; k < 4; k++) { const a = time * 1.6 + k * 1.57, s = (Math.sin(time * 6 + k * 2) + 1) * .8 + .6; star(x + 24 + Math.cos(a) * 32, y + 14 + Math.sin(a * 1.3) * 18, s); }
+  if (won && winT > .6) { ctx.font = `8px ${PIX}`; ctx.textAlign = 'center'; ctx.fillStyle = '#f0a43a'; ctx.fillText('SIEGERPREIS!', x + 24, y - 10); ctx.textAlign = 'start'; }
 }
 
 function drawGoal() {
   const gx = GOAL_X, gy = 12 * TS;
   if (gx - camX > viewW + 300) return;
+  const lg = ctx.createLinearGradient(0, 0, 0, gy);
+  lg.addColorStop(0, 'rgba(255,236,190,.22)'); lg.addColorStop(1, 'rgba(255,236,190,0)');
+  ctx.save(); ctx.font = `22px ${DISP}`; ctx.textAlign = 'center';
+  const wf = Math.sin(time * 17) > .93 ? .35 : 1, wp = .75 + .25 * Math.sin(time * 2.2);
+  ctx.globalAlpha = wf; ctx.shadowColor = '#ff7ad9'; ctx.shadowBlur = 18 * wp; ctx.fillStyle = '#ff7ad9';
+  ctx.fillText('WILLKOMMEN IM HIMMEL', gx - 30, 64);
+  ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,235,250,.9)'; ctx.fillText('WILLKOMMEN IM HIMMEL', gx - 30, 64);
+  ctx.restore();
+  ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(gx + 100, 0); ctx.lineTo(gx + 175, 0); ctx.lineTo(gx + 240, gy); ctx.lineTo(gx + 35, gy); ctx.closePath(); ctx.fill();
   // Regal mit Flaschen
   ctx.fillStyle = '#4a2f1a'; ctx.fillRect(gx + 10, gy - 150, 210, 6); ctx.fillRect(gx + 10, gy - 110, 210, 6);
   for (let i = 0; i < 12; i++) { ctx.globalAlpha = .85; ctx.drawImage(bottleSpr, gx + 16 + i * 17, gy - 176, 11, 26); ctx.drawImage(bottleSpr, gx + 22 + i * 17, gy - 136, 11, 26); }
@@ -422,13 +503,6 @@ function drawGoal() {
   ctx.fillStyle = '#c08a4e'; ctx.fillRect(gx + 34, gy - 50, 202, 8);
   // Hocker
   for (const sx of [gx + 20, gx + 250]) { ctx.fillStyle = '#2a2a30'; ctx.fillRect(sx + 6, gy - 26, 4, 26); ctx.fillStyle = '#c0392b'; ctx.fillRect(sx - 2, gy - 32, 20, 7); }
-  // Neon
-  ctx.save(); ctx.font = `34px ${DISP}`; ctx.textAlign = 'center';
-  const pulse = .7 + .3 * Math.sin(time * 3);
-  ctx.shadowColor = '#f0a43a'; ctx.shadowBlur = 24 * pulse; ctx.fillStyle = '#f0a43a'; ctx.fillText('PROST!', gx + 135, gy - 200);
-  ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,240,210,.85)'; ctx.fillText('PROST!', gx + 135, gy - 200);
-  ctx.font = `9px ${PIX}`; ctx.fillStyle = '#c46bff'; ctx.shadowColor = '#c46bff'; ctx.shadowBlur = 10; ctx.fillText('ZIEL', gx + 135, gy - 180);
-  ctx.restore();
 }
 
 function drawHUD() {
@@ -454,6 +528,7 @@ function render() {
     const bt = bumps.get(tx + ',' + ty);
     drawTile(c, tx, ty, tx * TS, ty * TS - (bt !== undefined ? Math.sin(Math.PI * bt / .16) * 7 : 0));
   }
+  drawFloorClouds();
   for (const b of bottles) {
     if (b.x < camX - 40 || b.x > camX + viewW + 40) continue;
     if (b.taken) { if (b.fade < 1) { ctx.globalAlpha = 1 - b.fade; ctx.drawImage(bottleSpr, b.x, b.y - b.fade * 24, b.w, b.h); ctx.globalAlpha = 1; } continue; }
@@ -462,6 +537,7 @@ function render() {
   for (const q of popups) { ctx.globalAlpha = Math.min(1, 2 - q.t * 3); ctx.drawImage(bottleSpr, q.x, q.y, 14, 26); ctx.globalAlpha = 1; }
   for (const e of enemies) if (!e.gone && (e.active || e.x < camX + viewW + 40)) drawEnemy(e);
   drawPlayer();
+  drawPrize();
   for (const q of particles) { ctx.globalAlpha = 1 - q.t / q.life; ctx.fillStyle = q.color; ctx.fillRect(q.x - 2, q.y - 2, 4, 4); }
   ctx.globalAlpha = 1;
   ctx.restore();
@@ -491,6 +567,7 @@ function showEnd(won) {
   document.getElementById('endTitle').textContent = won ? 'GESCHAFFT!' : 'GAME OVER';
   document.getElementById('endScore').textContent = `${got} / ${total} Flaschen`;
   document.getElementById('endText').textContent = won ? endMessage(got, total) : 'Die Eiswürfel haben gewonnen. Auf ein Neues?';
+  document.getElementById('endPrize').hidden = !won;
   ovEnd.hidden = false; controls.hidden = true;
   setTimeout(() => document.getElementById('againBtn').focus(), 50);
 }
@@ -540,6 +617,7 @@ function bindBtn(id, k) {
 bindBtn('bL', 'left'); bindBtn('bR', 'right'); bindBtn('bJ', 'jump');
 document.addEventListener('gesturestart', e => e.preventDefault());
 
+document.getElementById('endPrize').src = prizeSpr.toDataURL();
 resize(); resetGame();
 const go = () => requestAnimationFrame(frame);
 if (document.fonts && document.fonts.load) Promise.all([document.fonts.load(`12px ${PIX}`), document.fonts.load(`20px ${DISP}`)]).then(go, go); else go();
